@@ -12,8 +12,11 @@ I hope this code is useful for you. Good luck!
 -Nix
 
 P.S. If you like what I do check out my Patreon, Ko-fi, or Streamlabs:
+
 https://www.patreon.com/nixinteractive
-ko-fi.com/nixinteractive
+
+https://ko-fi.com/nixinteractive
+
 https://streamlabs.com/nixinteractive
 
 Last Update: 10/18/2018
