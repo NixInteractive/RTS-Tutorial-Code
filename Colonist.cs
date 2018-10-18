@@ -6,187 +6,219 @@ using UnityEngine.AI;
 //This script contains information specific to the colonist unit. It gets attached to the Colonist Object.
 public class Colonist : MonoBehaviour {
 
-    //Retrieves the TaskList
-    public TaskList task;
+    public TaskList task; //Retrieves the TaskList
 
-    //Retrieves the ResourceManager
-    public ResourceManager RM;
+    public ResourceManager RM; //Retrieves the ResourceManager
 
-    //Retrieves the ActionList
-    private ActionList AL;
+    private ActionList AL; //Retrieves the ActionList
 
-    //The resource node the colonist is currently harvesting
-    GameObject targetNode;
+    public GameObject targetNode; //The resource node the colonist is currently harvesting
 
-    //The type of resource the colonist is holding.
-    public NodeManager.ResourceTypes heldResourceType;
+    public NodeManager.ResourceTypes heldResourceType; //The type of resource the colonist is holding.
 
-    //Is the Colonist currently harvesting resources?
-    public bool isGathering = false;
+    public bool isGathering = false; //Is the Colonist currently harvesting resources?
+    public bool isGatherer = false; //Has the colonist been counted as a gatherer?
 
-    //The NavMeshAgent attached to the Colonist
-    private NavMeshAgent agent;
+    private NavMeshAgent agent; //The NavMeshAgent attached to the Colonist
 
-    //How much resource the Colonist is carrying and how much they can carry.
-    public int heldResource;
-    public int maxHeldResource;
+    public int heldResource; //The amount off resources the colonist is holding
+    public int maxHeldResource; //The maximum amount the colonist can carry
 
-    //An array of possible drop off locations
-    public GameObject[] drops;
+    public GameObject[] drops; //An array of possible drop off locations
+
+    public float distToTarget; //Distance to the target point
 
     // Use this for initialization
     void Start () {
 
-        //Starts the incremental gathering 
-        StartCoroutine(GatherTick());
+        StartCoroutine(GatherTick()); //Starts the incremental gathering 
 
-        //Retrieves the NavMeshAgent Component
-        agent = GetComponent<NavMeshAgent>();
+        agent = GetComponent<NavMeshAgent>(); //Retrieves the NavMeshAgent Component
 
-        //Finds the object with the ActionList script and pulls the information
-        AL = FindObjectOfType<ActionList>();
+        AL = FindObjectOfType<ActionList>(); //Finds the object with the ActionList script and pulls the information
     }
 	
 	// Update is called once per frame
 	void Update () {
 
-        //If the node is completely harvested this makes the Colonist drop off any remaining held resources
-        if (targetNode == null)
+        if(transform.position == agent.destination && task == TaskList.Moving) //Is the colonist done moving?
         {
-            if (heldResource != 0)
+            task = TaskList.Idle; //Set the colonist to be idle
+        }
+
+        if (task == TaskList.Gathering) //Is the colonist currently gathering?
+        {
+            distToTarget = Vector3.Distance(targetNode.transform.position, transform.position); //Gets the distance to the target node
+
+            if (distToTarget <= 3.5f) //Is the distance to the target less than 3.5?
             {
-                drops = GameObject.FindGameObjectsWithTag("Drops");
-                agent.destination = GetClosestDropOff(drops).transform.position;
-                drops = null;
-                task = TaskList.Delivering;
+                Gather(); //Calls the Gather() Method
+            }
+        }
+
+        if (task == TaskList.Delivering) //Is the colonist currently delivering?
+        {
+            if (distToTarget <= 3.5f) //Is the distance to the target drop less than 3.5?
+            {
+                if(RM.ice >= RM.maxIce) //Is the stored amount of Ice greater than or equal to the max amount of ice?
+                {
+                    task = TaskList.Idle; //Set the colonist to be idle
+                    isGatherer = false; //Set the colonist to not be a gatherer
+                }
+                else if(RM.ice + heldResource >= RM.maxIce) //Is the stored amount of ice going to exceed the max when the colonist delivers?
+                {
+                    int resourceOverflow = (int)RM.maxIce - (int)RM.ice; //How much ice can be stored before hitting capacity
+
+                    heldResource -= resourceOverflow; //Remove the ice that can be stored from the colonist
+                    RM.ice = RM.maxIce; //Set the stored ice to equal the maximum
+                    task = TaskList.Gathering; //Set the colonist to go back to gathering
+                    agent.destination = targetNode.transform.position; //Set the colonist's destination
+                    isGatherer = false; //Set the colonist to not be a gatherer
+                }
+                else
+                {
+                    RM.ice += heldResource; //Add the colonist's ice to the stored ice
+                    heldResource = 0; //Empty the colonist's ice storage
+                    task = TaskList.Gathering; //Set the colonist to go back to gathering
+                    agent.destination = targetNode.transform.position; //Set the colonist's destination
+                    isGatherer = false; //Set the colonist to not be a gatherer
+                }
+            }
+        }
+
+        if (targetNode == null) //Does the node the colonist was gathering from still exist?
+        {
+
+            if (heldResource != 0) //Is the colonist still holding resources?
+            {
+                drops = GameObject.FindGameObjectsWithTag("Drops"); //Fill the array of drops with all possible drop locations
+                agent.destination = GetClosestDropOff(drops).transform.position; //Set the colonist to drop resources at the nearest drop point
+                distToTarget = Vector3.Distance(GetClosestDropOff(drops).transform.position, transform.position); //The distance to the target drop point
+                drops = null; //Clear the drop array
+                task = TaskList.Delivering; //Set the colonist to be delivering
             }
             else
             {
-                task = TaskList.Idle;
+                task = TaskList.Idle; //Set the Colonist to be Idling
             }
         }
 
-        //Checks if the Colonist has to drop off the gathered resources
-        if (heldResource >= maxHeldResource)
+        if (heldResource >= maxHeldResource) //Is the colonist carrying the max amount of resources?
         {
-            
-            drops = GameObject.FindGameObjectsWithTag("Drops");
-            agent.destination = GetClosestDropOff(drops).transform.position;
-            drops = null;
-            task = TaskList.Delivering;
-            GetComponent<NavMeshObstacle>().enabled = false;
-            GetComponent<NavMeshAgent>().enabled = true;
+            targetNode.GetComponent<NodeManager>().gatherers--; //Remove itself from the node's gatherers
+            isGathering = false; //Set the colonist to not be gathering
+            drops = GameObject.FindGameObjectsWithTag("Drops"); //Fill the array of drops with all possible drop locations
+            agent.destination = GetClosestDropOff(drops).transform.position; //Set the colonist to drop resources at the nearest drop point
+            distToTarget = Vector3.Distance(GetClosestDropOff(drops).transform.position, transform.position); //The distance to the target drop point
+            drops = null; //Clear the drop array
+            task = TaskList.Delivering; //Set the colonist to be delivering
+            GetComponent<NavMeshObstacle>().enabled = false; //Disable the NavMeshObstacle component
+            GetComponent<NavMeshAgent>().enabled = true; //Enable the NavMeshAgent component
 
         }
 
-        //Calls the RightClick Method when the player right clicks while the colonis is selected.
-        if (Input.GetMouseButtonDown(1) && GetComponent<ObjectInfo>().isSelected)
+        if (Input.GetMouseButtonDown(1) && GetComponent<ObjectInfo>().isSelected) //Is the Player right clicking while this colonist is selected?
         {
-            RightClick();
+            RightClick(); //Calls the RightClick() Method
         }
     }
 
     //Retrieves all of the resource drop points and returns the closest one.
     GameObject GetClosestDropOff(GameObject[] dropOffs)
     {
-        GameObject closestDrop = null;
-        float closestDistance = Mathf.Infinity;
-        Vector3 position = transform.position;
+        GameObject closestDrop = null; //The closest drop point
 
-        foreach (GameObject targetDrop in dropOffs)
+        float closestDistance = Mathf.Infinity; //The closest drop distance
+
+        Vector3 position = transform.position;//This colonist's position
+
+        foreach (GameObject targetDrop in dropOffs) //For every drop point
         {
-            Vector3 direction = targetDrop.transform.position - position;
-            float distance = direction.sqrMagnitude;
-            if (distance < closestDistance)
+            Vector3 direction = targetDrop.transform.position - position; //The direction from the colonist to the drop point
+
+            float distance = direction.sqrMagnitude; //the distance from the colonist to the drop point
+
+            if (distance < closestDistance) //Is the drop in question closer than the closest drop?
             {
-                closestDistance = distance;
-                closestDrop = targetDrop;
+                closestDistance = distance; //Set the closest distance to be equal to the drop's distance
+                closestDrop = targetDrop; //Set the closest drop to be equal to the drop in question
             }
         }
 
-        return closestDrop;
+        return closestDrop; //returns the drop that is closest
     }
 
     //Performs different actions based on what the player clicks
     public void RightClick()
     {
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        RaycastHit hit;
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition); //Creates a ray from the camera to where the player clicks
+        RaycastHit hit; //The object the ray hits
 
-        if (Physics.Raycast(ray, out hit, 100))
+        if (Physics.Raycast(ray, out hit, 100)) //Did the ray hit anything?
         {
-
-            //Moves the Colonist if the player clicks the ground
-            if (hit.collider.tag == "Ground")
+            if (hit.collider.tag == "Ground") //Did the player click the ground?
             {
-                AL.Move(agent, hit);
-                task = TaskList.Moving;
+                if (isGathering) //Is the colonist gathering?
+                {
+                    targetNode.GetComponent<NodeManager>().gatherers--; //Remove the colonist from the node's gatherers
+                    isGathering = false; //Stop the colonist from gathering
+                    isGatherer = false; //Set the colonist to not be a gatherer
+                }
+
+                AL.Move(agent, hit); //Calls the Move() Method from ActionList
+                task = TaskList.Moving; //Sets the colonist to be moving
+                GetComponent<NavMeshObstacle>().enabled = false; //Disables the NavMeshObstacle component
+                GetComponent<NavMeshAgent>().enabled = true; //Enables the NavMeshAgent component
             }
-
-            //Tasks the Colonist to gather if the player clicks a resource node.
-            else if (hit.collider.tag == "Resource")
+            else if (hit.collider.tag == "Resource") //Did the player click on a resource node?
             {
-                AL.Move(agent, hit);
-                targetNode = hit.collider.gameObject;
-                task = TaskList.Gathering;
+                AL.Move(agent, hit); //Calls the Move() Method from ActionList
+                targetNode = hit.collider.gameObject; //Sets the targetNode to be the node that was clicked
+                task = TaskList.Gathering; //Sets the colonist to be gathering
+            }
+            else if (hit.collider.tag == "Drops") //Did the player click a drop point?
+            {
+                targetNode.GetComponent<NodeManager>().gatherers--; //Remove the colonist from the node's gatherers
+                isGathering = false; //Stop the colonist from gathering
+                drops = GameObject.FindGameObjectsWithTag("Drops"); //Fills the drop array with all possible drop points
+                agent.destination = GetClosestDropOff(drops).transform.position; //Sets the colonist's destination to the closest drop point
+                distToTarget = Vector3.Distance(GetClosestDropOff(drops).transform.position, transform.position); //The distance to the target drop point
+                drops = null; //Clears the drop array
+                task = TaskList.Delivering; //Sets the colonist to be delivering
+                GetComponent<NavMeshObstacle>().enabled = false; //Disable the NavMeshObstacle component
+                GetComponent<NavMeshAgent>().enabled = true; //Enables the NavMeshAgent component
             }
         }
     }
 
-    //Performs different actions based on what the Colonist hits
-    public void OnTriggerEnter(Collider other)
+    //Sets the colonist to be gathering
+    public void Gather()
     {
-        GameObject hitObject = other.gameObject;
+        isGathering = true; //Allows the colonist to gather
 
-        //If the hit object is a resource node the Colonist starts harvesting
-        if (hitObject.tag == "Resource" && task == TaskList.Gathering)
+        if (!isGatherer) //Is the colonist a gatherer?
         {
-            isGathering = true;
-            hitObject.GetComponent<NodeManager>().gatherers++;
-            heldResourceType = hitObject.GetComponent<NodeManager>().resourceType;
-            GetComponent<NavMeshObstacle>().enabled = true;
-            GetComponent<NavMeshAgent>().enabled = false;
+            targetNode.GetComponent<NodeManager>().gatherers++; //Add the colonist to the node's gatherers
+            isGatherer = true; //Sets the colonist to be a gatherer
         }
 
-        //If it's a drop off point the Colonist drops off it's held resources and goes back to it's target node if applicable
-        else if (hitObject.tag == "Drops" && task == TaskList.Delivering)
-        {
-            if (RM.ice >= RM.maxIce)
-            {
-                task = TaskList.Idle;
-            }
-            else
-            {
-                RM.ice += heldResource;
-                heldResource = 0;
-                task = TaskList.Gathering;
-                agent.destination = targetNode.transform.position;
-            }
-        }
-    }
-
-    //Cancels the gathering action when the Colonist leaves the node. This will probably be deleted in favor of a better method
-    public void OnTriggerExit(Collider other)
-    {
-        GameObject hitObject = other.gameObject;
-
-        if (hitObject.tag == "Resource")
-        {
-            hitObject.GetComponent<NodeManager>().gatherers--;
-            isGathering = false;
-            }
+        heldResourceType = targetNode.GetComponent<NodeManager>().resourceType; //Sets the resource that the colonist is holding to the same as the node
+        GetComponent<NavMeshObstacle>().enabled = true; //Enables the NavMeshObstacle component
+        GetComponent<NavMeshAgent>().enabled = false; //Disable the NavMeshAgent component
     }
 
     //Increments the held resource when the Colonist is gathering
     IEnumerator GatherTick()
     {
-        while (true)
+        while (true) //Is this CoRoutine running?
         {
-            yield return new WaitForSeconds(1);
-            if (isGathering)
+            yield return new WaitForSeconds(1); //Wait for 1 second
+
+            if (isGathering) //Is the colonist gathering?
             {
-                heldResource++;
+                heldResource++; //Adds 1 to the colonist's held resources
             }
         }
     }
 }
+
