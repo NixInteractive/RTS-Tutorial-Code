@@ -210,7 +210,7 @@ public class Colonist : MonoBehaviour {
     //Increments the held resource when the Colonist is gathering
     IEnumerator GatherTick()
     {
-        while (true) //Is this CoRoutine running?
+        while (true) //Is this Coroutine running?
         {
             yield return new WaitForSeconds(1); //Wait for 1 second
 
