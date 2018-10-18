@@ -39,7 +39,7 @@ public class NodeManager : MonoBehaviour {
     //This starts the incrementation process
     IEnumerator ResourceTick()
     {
-        while (true) //Is this CoRoutine running?
+        while (true) //Is this Coroutine running?
         {
             yield return new WaitForSeconds(1); //Wait for 1 second
             ResourceGather(); //Calls the ResourceGather() method
