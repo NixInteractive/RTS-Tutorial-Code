@@ -5,8 +5,8 @@ using UnityEngine;
 //This script handles camera/player movement. It gets attached to the Player object
 public class Controller : MonoBehaviour {
 
-    float panSpeed = 3; //How fast the player moves
-    float panDetect = 15; //The space from the edge of the screen that the mouse will be detected
+    float panSpeed = 3f; //How fast the player moves
+    float panDetect = 15f; //The space from the edge of the screen that the mouse will be detected
     float oldAltitude; //The stored altitude value for the player
     float altitude; //The current player altitude
 
