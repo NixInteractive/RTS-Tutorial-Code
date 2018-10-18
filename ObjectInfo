@@ -1,0 +1,51 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.AI;
+
+//This script contains the basic information for selectable objects
+public class ObjectInfo : MonoBehaviour {
+
+    public GameObject selectionIndidcator; //The object that shows the unit is selected
+    public GameObject iconCam; //The Camera that feeds into the unitIcon
+
+    public bool isPrimary = false; //Is the object the primary object?
+    public bool isSelected = false; //Is the object selected?
+    public bool isUnit; //Is the object a unit?
+
+    public string objectName; //The object's name
+
+    public int health; //The object's current health
+    public int maxHealth; //The object's max health
+    public int energy; //The object's current energy
+    public int maxEnergy; //The object's max energy
+    public int patk; //The object's physical attack
+    public int pdef; //The object's physical defense
+    public int eatk; //The object's energy attack
+    public int edef; //The object's energy defense
+    public int kills; //The object's kill count
+
+    public enum Ranks {Recruit} //All of the available ranks
+
+    public Ranks rank; //Creates the rank enum for this object
+
+    // Use this for initialization
+    void Start () {
+
+        iconCam = GetComponentInChildren<Camera>().gameObject; //Retrieves the camera for the iconCam
+    }
+	
+	// Update is called once per frame
+	void Update () {
+
+        selectionIndidcator.SetActive(isSelected); //Sets the status of the selectionIndicator based on if this object is selected
+
+        if(health <= 0) //Is the object's health less than or equal to zero?
+        {
+            Destroy(gameObject); //Destroy this object
+        }
+
+        iconCam.SetActive(isPrimary); //Sets the iconCam's status based on if this object is the primary object
+    }
+}
