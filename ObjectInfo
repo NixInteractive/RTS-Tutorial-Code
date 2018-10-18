@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.AI;
 
-//This script contains the basic information for selectable objects
+//This script contains the basic information for selectable objects. It gets attached to all selectable objects
 public class ObjectInfo : MonoBehaviour {
 
     public GameObject selectionIndidcator; //The object that shows the unit is selected
