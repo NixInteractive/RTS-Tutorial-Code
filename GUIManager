@@ -8,8 +8,6 @@ public class GUIManager : MonoBehaviour {
 
     private ObjectInfo primary; //The object information to be displayed
 
-    private CanvasGroup UnitPanel; //The unit information panel
-
     private Slider UHB; //The slider object that acts as a health bar
     private Slider UEB; //The slider object that acts as an energy bar
 
@@ -26,7 +24,6 @@ public class GUIManager : MonoBehaviour {
     // Use this for initialization
     void Start () {
 
-        UnitPanel = GameObject.Find("UnitPanel").GetComponent<CanvasGroup>(); //Assigns the UnitPanel object
         UEB = GameObject.Find("UnitEnergyBar").GetComponent<Slider>(); //Assigns the UEB object
         UHB = GameObject.Find("UnitHealthBar").GetComponent<Slider>(); //Assigns the UHB object
         unitNameDisp = GameObject.Find("UnitName").GetComponent<Text>(); //Assigns the unitNameDisp object
