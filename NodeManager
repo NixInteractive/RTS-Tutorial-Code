@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-//This script holds all of the information required for resource nodes
+//This script holds all of the information required for resource nodes. It gets attached to all resource nodes
 public class NodeManager : MonoBehaviour {
 
     public enum ResourceTypes { Ice, Iron, Power, Food, Oxygen, Population} //Possible resource types
