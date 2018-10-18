@@ -10,8 +10,7 @@ public class ActionList : MonoBehaviour {
     //This is the basic movement action.
 	public void Move(NavMeshAgent agent, RaycastHit hit)
     {
-        agent.destination = hit.point;
-        Debug.Log("Moving");
+        agent.destination = hit.point; //Sets the agent's destination to the clicked point
     }
 
 }
