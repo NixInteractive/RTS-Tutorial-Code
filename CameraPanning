@@ -2,16 +2,23 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-//This script handles camera/player movement. It gets attached to the Player object
-public class Controller : MonoBehaviour {
+//This script gets attached to the Player object and provides the ability to pan the camera 
+public class CameraPanning : MonoBehaviour {
 
     float panSpeed = 3f; //How fast the player moves
     float panDetect = 15f; //The space from the edge of the screen that the mouse will be detected
     float oldAltitude; //The stored altitude value for the player
     float altitude; //The current player altitude
 
+    // Use this for initialization
+    private void Start()
+    {
+        oldAltitude = Terrain.activeTerrain.SampleHeight(transform.position); //Sets the player's oldAltitude to be equal to altitude
+    }
+
     // Update is called once per frame
-    void Update () {
+    void Update()
+    {
 
         float moveX = Input.GetAxis("Horizontal") * panSpeed * Time.deltaTime; //Left and right movement
         float moveY = Input.GetAxisRaw("Mouse ScrollWheel"); //Vertical movement
@@ -21,7 +28,7 @@ public class Controller : MonoBehaviour {
 
         altitude = Terrain.activeTerrain.SampleHeight(transform.position); //Sets the player's altitude value
 
-        if(oldAltitude != altitude) //Is the stored altitude value different from the current altitude value
+        if (oldAltitude != altitude) //Is the stored altitude value different from the current altitude value
         {
             AltAdjust(); //Calls the AltAdjust() method
             oldAltitude = altitude; //Sets the stored altitude value to be the current altitude value
@@ -57,7 +64,7 @@ public class Controller : MonoBehaviour {
 
     }
 
-    //Adjusts the player height to follow the terrain
+    //Adjusts the player height to follow the terrain. This needs to be smoothed out before it will be an effective method.
     public void AltAdjust()
     {
         float newHeight = transform.position.y; //stores the player transform's y position
@@ -65,10 +72,16 @@ public class Controller : MonoBehaviour {
         Vector3 pos = transform.position; //Stores the player transform position 
 
         pos.y = altitude; //Sets the y position value to equal the current altitude of the player
-	    
-        pos.y += newHeight; //Adds the current y position value to the altitude
+
+        if (altitude > oldAltitude)//Is the altitude greater than the oldAltitude?
+        {
+            pos.y += newHeight; //Adds the current y position value to the altitude
+        }
+        else
+        {
+            pos.y -= newHeight; //Subtracts the current y position value to the altitude
+        }
 
         transform.position = pos; //Sets the player's transform position to the new height
     }
 }
-
