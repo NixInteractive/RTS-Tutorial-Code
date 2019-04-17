@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
-//This script contains information specific to the colonist unit. It gets attached to the Colonist Object.
+//This script contains information specific to the Colonist unit. It gets attached to the Colonist Object.
 public class Colonist : MonoBehaviour {
 
     public TaskList task; //Retrieves the TaskList
@@ -12,41 +12,73 @@ public class Colonist : MonoBehaviour {
 
     private ActionList AL; //Retrieves the ActionList
 
-    public GameObject targetNode; //The resource node the colonist is currently harvesting
+    public GameObject targetNode; //The resource node the Colonist is currently harvesting
 
-    public NodeManager.ResourceTypes heldResourceType; //The type of resource the colonist is holding.
+    public NodeManager.ResourceTypes heldResourceType; //The type of resource the Colonist is holding.
 
     public bool isGathering = false; //Is the Colonist currently harvesting resources?
-    public bool isGatherer = false; //Has the colonist been counted as a gatherer?
+    public bool isGatherer = false; //Has the Colonist been counted as a gatherer?
+    public bool canAttack; //Can this Colonist attack?
 
     private NavMeshAgent agent; //The NavMeshAgent attached to the Colonist
 
-    public int heldResource; //The amount off resources the colonist is holding
-    public int maxHeldResource; //The maximum amount the colonist can carry
+    public int heldResource; //The amount off resources the Colonist is holding
+    public int maxHeldResource; //The maximum amount the Colonist can carry
 
     public GameObject[] drops; //An array of possible drop off locations
 
     public float distToTarget; //Distance to the target point
+    public float attackSpeed; //The time between attacks
+    public float range; //The Colonist's range of attack
 
     // Use this for initialization
     void Start () {
 
-        StartCoroutine(GatherTick()); //Starts the incremental gathering 
+        StartCoroutine(AttackTick()); //Starts the attack cooldown
 
+        StartCoroutine(GatherTick()); //Starts the incremental gathering 
+        
         agent = GetComponent<NavMeshAgent>(); //Retrieves the NavMeshAgent Component
 
         AL = FindObjectOfType<ActionList>(); //Finds the object with the ActionList script and pulls the information
     }
-	
-	// Update is called once per frame
-	void Update () {
 
-        if(transform.position == agent.destination && task == TaskList.Moving) //Is the colonist done moving?
+    // Update is called once per frame
+    void Update()
+    {
+
+        if (task == TaskList.Attacking) //Is the Colonist attacking?
         {
-            task = TaskList.Idle; //Set the colonist to be idle
+            if(GetComponent<ObjectInfo>().target != null) //Checks to make sure this Colonist has a target.
+            {
+                distToTarget = Vector3.Distance(GetComponent<ObjectInfo>().target.gameObject.transform.position, transform.position); //Retrieves the distance to the target
+
+                if(distToTarget <= range) //Is the target within range
+                {
+                    canAttack = true; //This Colonist can attack
+                }
+                else
+                {
+                    canAttack = false; //This Colonist can't attack
+                }
+            }
         }
 
-        if (task == TaskList.Gathering) //Is the colonist currently gathering?
+        if(GetComponent<ObjectInfo>().target == null) //Checks to see if this Colonist has no target
+        {
+            if(task == TaskList.Attacking) //Is this Colonist Attacking?
+            {
+                canAttack = false; //This Colonist can't attack
+                task = TaskList.Idle; //This Colonist is now Idle
+            }
+        }
+
+        if (transform.position == agent.destination && task == TaskList.Moving) //Is the Colonist done moving?
+        {
+            task = TaskList.Idle; //Set the Colonist to be idle
+        }
+
+        if (task == TaskList.Gathering) //Is the Colonist currently gathering?
         {
             distToTarget = Vector3.Distance(targetNode.transform.position, transform.position); //Gets the distance to the target node
 
@@ -56,37 +88,92 @@ public class Colonist : MonoBehaviour {
             }
         }
 
-        if (task == TaskList.Delivering) //Is the colonist currently delivering?
+        if (task == TaskList.Delivering) //Is the Colonist currently delivering?
         {
             if (distToTarget <= 3.5f) //Is the distance to the target drop less than 3.5?
             {
-                if(RM.ice >= RM.maxIce) //Is the stored amount of Ice greater than or equal to the max amount of ice?
+                if (heldResourceType == NodeManager.ResourceTypes.Ice) //Is this Colonist holding Ice?
                 {
-                    task = TaskList.Idle; //Set the colonist to be idle
-                    isGatherer = false; //Set the colonist to not be a gatherer
-                }
-                else if(RM.ice + heldResource >= RM.maxIce) //Is the stored amount of ice going to exceed the max when the colonist delivers?
-                {
-                    int resourceOverflow = (int)RM.maxIce - (int)RM.ice; //How much ice can be stored before hitting capacity
+                    if (RM.ice >= RM.maxIce) //Is the stored amount of Ice greater than or equal to the max amount of ice?
+                    {
+                        task = TaskList.Idle; //Set the Colonist to be idle
+                        isGatherer = false; //Set the Colonist to not be a gatherer
+                    }
+                    else if (RM.ice + heldResource >= RM.maxIce) //Is the stored amount of ice going to exceed the max when the Colonist delivers?
+                    {
+                        int resourceOverflow = (int)RM.maxIce - (int)RM.ice; //How much ice can be stored before hitting capacity
 
-                    heldResource -= resourceOverflow; //Remove the ice that can be stored from the colonist
-                    RM.ice = RM.maxIce; //Set the stored ice to equal the maximum
-                    task = TaskList.Gathering; //Set the colonist to go back to gathering
-                    agent.destination = targetNode.transform.position; //Set the colonist's destination
-                    isGatherer = false; //Set the colonist to not be a gatherer
+                        heldResource -= resourceOverflow; //Remove the ice that can be stored from the colonist
+                        RM.ice = RM.maxIce; //Set the stored ice to equal the maximum
+                        task = TaskList.Gathering; //Set the Colonist to go back to gathering
+                        agent.destination = targetNode.transform.position; //Set the Colonist's destination
+                        isGatherer = false; //Set the Colonist to not be a gatherer
+                    }
+                    else
+                    {
+                        RM.ice += heldResource; //Add the Colonist's ice to the stored ice
+                        heldResource = 0; //Empty the Colonist's ice storage
+                        task = TaskList.Gathering; //Set the Colonist to go back to gathering
+                        agent.destination = targetNode.transform.position; //Set the Colonist's destination
+                        isGatherer = false; //Set the Colonist to not be a gatherer
+                    }
                 }
-                else
+                else if (heldResourceType == NodeManager.ResourceTypes.Iron)  //Is this Colonist holding Iron?
                 {
-                    RM.ice += heldResource; //Add the colonist's ice to the stored ice
-                    heldResource = 0; //Empty the colonist's ice storage
-                    task = TaskList.Gathering; //Set the colonist to go back to gathering
-                    agent.destination = targetNode.transform.position; //Set the colonist's destination
-                    isGatherer = false; //Set the colonist to not be a gatherer
+                    if (RM.iron >= RM.maxIron) //Is the stored amount of Iron greater than or equal to the max amount of Iron?
+                    {
+                        task = TaskList.Idle; //Set the colonist to be idle
+                        isGatherer = false; //Set the colonist to not be a gatherer
+                    }
+                    else if (RM.iron + heldResource >= RM.maxIron) //Is the stored amount of Iron going to exceed the max when the colonist delivers?
+                    {
+                        int resourceOverflow = (int)RM.maxIron - (int)RM.iron; //How much Iron can be stored before hitting capacity
+
+                        heldResource -= resourceOverflow; //Remove the Iron that can be stored from the colonist
+                        RM.iron = RM.maxIron; //Set the stored Iron to equal the maximum
+                        task = TaskList.Gathering; //Set the colonist to go back to gathering
+                        agent.destination = targetNode.transform.position; //Set the colonist's destination
+                        isGatherer = false; //Set the colonist to not be a gatherer
+                    }
+                    else
+                    {
+                        RM.iron += heldResource; //Add the colonist's Iron to the stored Iron
+                        heldResource = 0; //Empty the colonist's Iron storage
+                        task = TaskList.Gathering; //Set the colonist to go back to gathering
+                        agent.destination = targetNode.transform.position; //Set the colonist's destination
+                        isGatherer = false; //Set the colonist to not be a gatherer
+                    }
+                }
+                else if (heldResourceType == NodeManager.ResourceTypes.Food) //Is this Colonist holding Food?
+                {
+                    if (RM.food >= RM.maxFood) //Is the stored amount of Ice greater than or equal to the max amount of Food?
+                    {
+                        task = TaskList.Idle; //Set the colonist to be idle
+                        isGatherer = false; //Set the colonist to not be a gatherer
+                    }
+                    else if (RM.food + heldResource >= RM.maxFood) //Is the stored amount of Food going to exceed the max when the colonist delivers?
+                    {
+                        int resourceOverflow = (int)RM.maxFood - (int)RM.food; //How much Food can be stored before hitting capacity
+
+                        heldResource -= resourceOverflow; //Remove the Food that can be stored from the colonist
+                        RM.food = RM.maxFood; //Set the stored Food to equal the maximum
+                        task = TaskList.Gathering; //Set the colonist to go back to gathering
+                        agent.destination = targetNode.transform.position; //Set the colonist's destination
+                        isGatherer = false; //Set the colonist to not be a gatherer
+                    }
+                    else
+                    {
+                        RM.food += heldResource; //Add the colonist's Food to the stored Food
+                        heldResource = 0; //Empty the colonist's Food storage
+                        task = TaskList.Gathering; //Set the colonist to go back to gathering
+                        agent.destination = targetNode.transform.position; //Set the colonist's destination
+                        isGatherer = false; //Set the colonist to not be a gatherer
+                    }
                 }
             }
         }
 
-        if (targetNode == null) //Does the node the colonist was gathering from still exist?
+        if (targetNode == null && GetComponent<ObjectInfo>().target == null) //Does the node the colonist was gathering from still exist?
         {
 
             if (heldResource != 0) //Is the colonist still holding resources?
@@ -188,6 +275,17 @@ public class Colonist : MonoBehaviour {
                 GetComponent<NavMeshObstacle>().enabled = false; //Disable the NavMeshObstacle component
                 GetComponent<NavMeshAgent>().enabled = true; //Enables the NavMeshAgent component
             }
+            else if(hit.collider.tag == "Selectable") //Did the player click a selectable object?
+            {
+                ObjectInfo targetInfo = hit.collider.GetComponent<ObjectInfo>(); //Retrieve the object's info
+
+                if (!targetInfo.isPlayerObject) //Is the object owned by an enemy?
+                {
+                    GetComponent<ObjectInfo>().target = targetInfo.gameObject; //This colonist will target that object
+                    AL.Move(agent, hit); //This colonist will move towards the target
+                    task = TaskList.Attacking; //This colonist is now attacking
+                }
+            }
         }
     }
 
@@ -210,7 +308,7 @@ public class Colonist : MonoBehaviour {
     //Increments the held resource when the Colonist is gathering
     IEnumerator GatherTick()
     {
-        while (true) //Is this Coroutine running?
+        while (true) //Is this CoRoutine running?
         {
             yield return new WaitForSeconds(1); //Wait for 1 second
 
@@ -220,5 +318,23 @@ public class Colonist : MonoBehaviour {
             }
         }
     }
-}
 
+    //Increments attack damage when this colonist is attacking
+    IEnumerator AttackTick()
+    {
+        while (true) //Is this CoRoutine running?
+        {
+            yield return new WaitForSeconds(attackSpeed); //Wait for the set attack speed
+
+            if (canAttack) //Can this colonist attack?
+            {
+                    ObjectInfo targetInfo = GetComponent<ObjectInfo>().target.GetComponent<ObjectInfo>(); //Retrieves the target's info
+
+                    targetInfo.health -= Mathf.Round(GetComponent<ObjectInfo>().patk * (1 - (targetInfo.pdef * 0.05f))); //Deal physical damage to the target
+                    targetInfo.health -= Mathf.Round(GetComponent<ObjectInfo>().eatk * (1 - (targetInfo.edef * 0.05f))); //Deal energy damage to the target
+
+                    Debug.Log(targetInfo.health); //Checks the target's health and prints it to the console
+            }
+        }
+    }
+}
