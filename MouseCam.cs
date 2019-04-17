@@ -2,8 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-//This script makes it so when the player holds down the middle mouse button the camera moves with the mouse like a first person character.
-//This script gets attached to the main camera that the player controls
+//This script makes it so when the player holds down the middle mouse button the camera moves with the mouse like a first person character. This script gets attached to the main camera that the player controls
 public class MouseCam : MonoBehaviour {
 
     Vector2 mousePos; //The mouse position as a vector2
