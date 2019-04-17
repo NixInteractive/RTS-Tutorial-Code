@@ -5,7 +5,7 @@ using UnityEngine;
 //This script holds all of the information required for resource nodes. It gets attached to all resource nodes
 public class NodeManager : MonoBehaviour {
 
-    public enum ResourceTypes { Ice, Iron, Power, Food, Oxygen, Population} //Possible resource types
+    public enum ResourceTypes { Ice, Iron, Food} //Possible resource types
 
     public ResourceTypes resourceType; //Creates the enum for this node
 
@@ -39,7 +39,7 @@ public class NodeManager : MonoBehaviour {
     //This starts the incrementation process
     IEnumerator ResourceTick()
     {
-        while (true) //Is this Coroutine running?
+        while (true) //Is this CoRoutine running?
         {
             yield return new WaitForSeconds(1); //Wait for 1 second
             ResourceGather(); //Calls the ResourceGather() method
