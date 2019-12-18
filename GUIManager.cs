@@ -6,62 +6,110 @@ using UnityEngine.UI;
 //This script controls the in-game Selection HUD and all  object-related items displayed to the player on screen. This gets attached to the player object
 public class GUIManager : MonoBehaviour {
 
-    private ObjectInfo primary; //The object information to be displayed
+    public ObjectInfo primary; //The object information to be displayed
 
-    private Slider UHB; //The slider object that acts as a health bar
-    private Slider UEB; //The slider object that acts as an energy bar
+    public Animator minimapAnim; //The Animator component attached to the minimap
+    public Animator toolTipAnim; //The Animator component attached to the Tool Tip
 
-    private Text unitNameDisp; //The unit name text object
-    private Text unitHealthDisp; //The unit health text object
-    private Text unitEnergyDisp; //The unit energy text object
-    private Text upatkDisp; //The unit physical attack text object
-    private Text updefDisp; //The unit physical defense text object
-    private Text ueatkDisp; //The unit energy attack text object
-    private Text uedefDisp; //The unit energy defense text object
-    private Text urankDisp; //The unit rank text object
-    private Text ukillDisp; //The unit kill count text object
+    public Slider HB; //The slider object that acts as a health bar
+    public Slider EB; //The slider object that acts as an energy bar
+
+    public Text nameDisp; //The unit name text object
+    public Text healthDisp; //The unit health text object
+    public Text energyDisp; //The unit energy text object
+    public Text patkDisp; //The unit physical attack text object
+    public Text pdefDisp; //The unit physical defense text object
+    public Text eatkDisp; //The unit energy attack text object
+    public Text edefDisp; //The unit energy defense text object
+    public Text rankDisp; //The unit rank text object
+    public Text killDisp; //The unit kill count text object
+    public Text toolTipText; //The Tool Tip text object
+
+    private bool isMiniMapVisible = true; //Is the minimap visible?
+    private bool isToolTipVisible = false; //Is the Tool Tip visible?
+
+    public string tooltipInfo; //The text to be displayed in the Tool Tip
 
     // Use this for initialization
-    void Start () {
-
-        UEB = GameObject.Find("UnitEnergyBar").GetComponent<Slider>(); //Assigns the UEB object
-        UHB = GameObject.Find("UnitHealthBar").GetComponent<Slider>(); //Assigns the UHB object
-        unitNameDisp = GameObject.Find("UnitName").GetComponent<Text>(); //Assigns the unitNameDisp object
-        unitHealthDisp = GameObject.Find("HealthDisp").GetComponent<Text>(); //Assigns the unitHealthDisp object
-        unitEnergyDisp = GameObject.Find("EnergyDisp").GetComponent<Text>(); //Assigns the unitEnergyDisp object
-        upatkDisp = GameObject.Find("PATKDisp").GetComponent<Text>(); //Assigns the upatkDisp object
-        updefDisp = GameObject.Find("PDEFDisp").GetComponent<Text>(); //Assigns the updefDisp object
-        ueatkDisp = GameObject.Find("EATKDisp").GetComponent<Text>(); //Assigns the ueatkDisp object
-        uedefDisp = GameObject.Find("EDEFDisp").GetComponent<Text>(); //Assigns the uedefDisp object
-        urankDisp = GameObject.Find("RankDisp").GetComponent<Text>(); //Assigns the urankDisp object
-        ukillDisp = GameObject.Find("KillCountDisp").GetComponent<Text>(); //Assigns the ukillDisp object
-
+    private void Start()
+    {
+        tooltipInfo = "Hover the Mouse over an Object to see a ToolTip"; //Sets the default Tool Tip text
     }
-	
-	// Update is called once per frame
-	void Update () {
 
+    // Update is called once per frame
+    void Update()
+    {
         primary = GameObject.FindGameObjectWithTag("Player").GetComponent<InputManager>().selectedInfo; //Assigns the primary object
 
-        if (primary.maxEnergy <= 0) //Does the selected object have energy?
+        toolTipText.text = tooltipInfo; //Sets the displayed text to be equal to the desired text
+
+        //Checks to see if the Tool Tip text is equal to the default text and sets the visibility accordingly
+        if (tooltipInfo == "Hover the Mouse over an Object to see a ToolTip")
         {
-            UEB.gameObject.SetActive(false); //Deactivates the Energy Bar
+            isToolTipVisible = false;
+        }
+        else
+        {
+            isToolTipVisible = true;
         }
 
-        UHB.maxValue = primary.maxHealth; //Sets the max value of the health bar to be equal to the selected unit's max health
-        UHB.value = primary.health; //Sets the value of the health bar to be equal to the selected object's current health
+        //Toggles the minimap visibility when the player presses the "M" key 
+        if (Input.GetKeyDown(KeyCode.M))
+        {
+            if (isMiniMapVisible)
+            {
+                isMiniMapVisible = false;
+            }
+            else
+            {
+                isMiniMapVisible = true;
+            }
+        }
 
-        UEB.maxValue = primary.maxEnergy; //Sets the max value of the energy bar to be equal to the selected unit's max energy
-        UEB.value = primary.energy; //Sets the value of the energy bar to be equal to the selected object's current energy
+        //Sets the minimap Animator's "isVisible" bool based on the minimap's visibility
+        if (isMiniMapVisible)
+        {
+            minimapAnim.SetBool("isVisible", true);
+        }
+        else
+        {
+            minimapAnim.SetBool("isVisible", false);
+        }
 
-        unitNameDisp.text = primary.objectName; //Displays the unit's name
-        unitHealthDisp.text = "HP: " + primary.health; //Displays the unit's health
-        unitEnergyDisp.text = "EP: " + primary.energy; //Displays the unit's energy
-        upatkDisp.text = "PATK: " + primary.patk; //Displays the unit's physical attack
-        updefDisp.text = "PDEF: " + primary.pdef; //Displays the unit's physical defense
-        ueatkDisp.text = "EATK: " + primary.eatk; //Displays the unit's energy attack
-        uedefDisp.text = "EDEF: " + primary.edef; //Displays the unit's energy defense
-        urankDisp.text = "" + primary.rank; //Displays the unit's rank
-        ukillDisp.text = "Kills: " + primary.kills; //Displays the unit's kill count
+        //Sets the Tool Tip Animator's "isVisible" bool based on the Tool Tip's visibility
+        if (!isToolTipVisible)
+        {
+            toolTipAnim.SetBool("isVisible", false);
+        }
+        else
+        {
+            toolTipAnim.SetBool("isVisible", true);
+        }
+
+        //Checks to see if there is an object selected
+        if (primary)
+        {
+            if (primary.maxEnergy <= 0) //Does the selected object have energy?
+            {
+                EB.gameObject.SetActive(false); //Deactivates the Energy Bar
+            }
+
+            HB.maxValue = primary.maxHealth; //Sets the max value of the health bar to be equal to the selected unit's max health
+            HB.value = primary.health; //Sets the value of the health bar to be equal to the selected object's current health
+
+            EB.maxValue = primary.maxEnergy; //Sets the max value of the energy bar to be equal to the selected unit's max energy
+            EB.value = primary.energy; //Sets the value of the energy bar to be equal to the selected object's current energy
+
+            nameDisp.text = primary.objectName; //Displays the unit's name
+            healthDisp.text = "HP: " + primary.health; //Displays the unit's health
+            energyDisp.text = "EP: " + primary.energy; //Displays the unit's energy
+            patkDisp.text = "PATK: " + primary.patk; //Displays the unit's physical attack
+            pdefDisp.text = "PDEF: " + primary.pdef; //Displays the unit's physical defense
+            eatkDisp.text = "EATK: " + primary.eatk; //Displays the unit's energy attack
+            edefDisp.text = "EDEF: " + primary.edef; //Displays the unit's energy defense
+            rankDisp.text = "" + primary.rank; //Displays the unit's rank
+            killDisp.text = "Kills: " + primary.kills; //Displays the unit's kill count
+        }
     }
 }
+
