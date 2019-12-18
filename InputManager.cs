@@ -5,93 +5,105 @@ using UnityEngine;
 //This Script handles basic user input. It should be attached to the player object
 public class InputManager : MonoBehaviour {
 
+    [SerializeField] LayerMask mask; //The layer we want our Raycast to hit
+
     public bool hasPrimary; //Does the player have a primary selected object?
+    public bool circlePlaced = false; //Has the selection circle been placed?
 
-    public CanvasGroup UnitPanel; //The unit information panel
-
-    private Vector2 boxStart; //The mouse coordinates stored when the player clicks
-    private Vector2 boxEnd; //The mouse coordinates stored when the player releases the mouse button
+    public CanvasGroup ObjectPanel; //The unit information panel
 
     public GameObject primaryObject; //The primary selected game object
-
-    private Rect selectBox; //The selection box
-
-    public Texture boxTex; //The selection box texture
+    public GameObject selectionCircle; //The actual selection circle
+    public GameObject selectionCirclePrefab; //The prefab for the selection circle
 
     public ObjectInfo selectedInfo; //The primary object's information
 
     private GameObject[] units; //An array of units
+
+    private Collider[] colliders; //An array of colliders that have been selected
+
+
 	
 	// Update is called once per frame
 	void Update () {
 
         hasPrimary = primaryObject; //If there is a primary object, hasPrimary is true
 
-        UnitPanel = GameObject.Find("UnitPanel").GetComponent<CanvasGroup>(); //Assigns the UnitPanel object
-
         if (Input.GetMouseButtonDown(0)) //Is the player left clicking?
         {
             LeftClick(); //Calls the LeftClick() method
         }
 
-        if(Input.GetMouseButton(0) && boxStart == Vector2.zero) //Is the player holding down the left mouse button and is boxStart zero?
+        if(Input.GetMouseButton(0) && selectionCircle == null) //Is the player holding the left mouse button while there is no selection circle?
         {
-            boxStart = Input.mousePosition; //Sets the boxStart to equal the mouse position when the player first started holding the mouse button down
-        }
-        else if(Input.GetMouseButton(0) && boxStart != Vector2.zero) //Is the player holding down the left mouse button and is boxStart not equal to zero
-        {
-            boxEnd = Input.mousePosition; //Sets the boxEnd to equal the mouse position
+            circlePlaced = true; //The selection circle has been placed
+            CircleCreate(); //Calls the CircleCreate method
         }
 
         if (Input.GetMouseButtonUp(0)) //Did the player release the left mouse button?
         {
-            units = GameObject.FindGameObjectsWithTag("Selectable"); //Stores all selectable objects into an array
-
-            MultiSelect(); //Calls the MultiSelect() method
+            MultiSelect(); //Calls the MultiSelect method
+            Destroy(selectionCircle); //Destroys the selection circle
+            selectionCircle = null; //Removes the reference to the selection circle
+            colliders = null; //Empties the colliders array
+            circlePlaced = false; //The circle is no longer placed
         }
 
-        selectBox = new Rect(boxStart.x, Screen.height - boxStart.y, boxEnd.x - boxStart.x, -1 * ((Screen.height - boxStart.y) - (Screen.height - boxEnd.y))); //Creates the selection box values
+        if(circlePlaced == true) //Has the circle been placed?
+        {
+            selectionCircle.transform.localScale = new Vector3(selectionCircle.transform.localScale.x + 0.75f, selectionCircle.transform.localScale.y, selectionCircle.transform.localScale.z + 0.75f); //Increase the x and z scale values of the selection circle
+        }
 
         if (primaryObject != null) //Is there a primary object?
         {
-            UnitPanel.alpha = 1; //Sets the unit panel to be visible
-            UnitPanel.blocksRaycasts = true; //Sets the unit panel to block raycasts
-            UnitPanel.interactable = true; //Sets the unit panel to be interactable
+            ObjectPanel.alpha = 1; //Sets the unit panel to be visible
+            ObjectPanel.blocksRaycasts = true; //Sets the unit panel to block raycasts
+            ObjectPanel.interactable = true; //Sets the unit panel to be interactable
         }
         else
         {
-            UnitPanel.alpha = 0; //Sets the unit panel to be invisible
-            UnitPanel.blocksRaycasts = false; //Sets the unit panel to not block raycasts
-            UnitPanel.interactable = false; //Sets the unit panel to be not interactable
+            ObjectPanel.alpha = 0; //Sets the unit panel to be invisible
+            ObjectPanel.blocksRaycasts = false; //Sets the unit panel to not block raycasts
+            ObjectPanel.interactable = false; //Sets the unit panel to be not interactable
         }
     }
 
-    //Selects all units within the selection box
+    //Creates and places a selection circle where the player clicked
+    public void CircleCreate()
+    {
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition); //Creates a ray from the camera to where the player clicked
+        RaycastHit hit; //The point the ray hits
+
+        if (Physics.Raycast(ray, out hit, 500, mask)) //Did the ray hit anything on the Layer Mask?
+        {
+            selectionCircle = Instantiate(selectionCirclePrefab, hit.point, new Quaternion(0, 0, 0, 0)); //Creates and places the selection circle
+        }
+    }
+
+    //Selects all units within the selection circle
     public void MultiSelect()
     {
-        foreach(GameObject unit in units) //For each unit in the array of selectable objects
+        colliders = Physics.OverlapSphere(selectionCircle.transform.position, selectionCircle.transform.localScale.x * 0.9f); //Grabs all of the colliders the selection circle intersects
+
+        foreach (Collider collider in colliders) //For every collider to be selected
         {
-            if (unit.GetComponent<ObjectInfo>().isUnit) //Is the object in question a unit?
+            if(collider.gameObject.tag == "Selectable") //Is the collider on a selectable object?
             {
-                Vector2 unitPos = Camera.main.WorldToScreenPoint(unit.transform.position); //Translate the unit's screen position into 2D coordinates
-
-                if (selectBox.Contains(unitPos, true)) //Is the unit inside the selection box?
+                if(collider.GetComponent<ObjectInfo>().isUnit && collider.GetComponent<ObjectInfo>().isPlayerObject) //Is the collider on a unit owned by the player?
                 {
-
-                    if(!hasPrimary) //Is there not a primary selected object?
+                    if (!hasPrimary) //Checks to see if the player has no primary object selected
                     {
-                        primaryObject = unit; //This unit becomes the primary object
-                        unit.GetComponent<ObjectInfo>().isPrimary = true; //Sets the unit to be the primary
+                        primaryObject = collider.gameObject; //Sets this object to be the primary object
+                        collider.GetComponent<ObjectInfo>().isPrimary = true; //Tells the object it's the primary
+                        selectedInfo = collider.GetComponent<ObjectInfo>(); //Displays this object's information
                     }
 
-                    unit.GetComponent<ObjectInfo>().isSelected = true; //Sets the unit to be selected
+                    collider.GetComponent<ObjectInfo>().isSelected = true; //Sets the object to be selected
                 }
             }
         }
-
-        boxStart = Vector2.zero; //Sets the boxStart to be zero
-        boxEnd = Vector2.zero; //Sets the boxEnd to be zero
     }
+
 
     //Performs actions based on what the player clicks
     public void LeftClick()
@@ -140,15 +152,6 @@ public class InputManager : MonoBehaviour {
                 selectedInfo.isSelected = true; //Sets the selected unit to be selected
                 selectedInfo.isPrimary = true; //Sets the selected unit to be the primary unit
             }
-        }
-    }
-
-    //This draws the selection box on the screen
-    void OnGUI()
-    {
-        if(boxStart != Vector2.zero && boxEnd != Vector2.zero) //Does the selection box have any values?
-        {
-            GUI.DrawTexture(selectBox, boxTex); //Draws a box using the selection box values
         }
     }
 }
