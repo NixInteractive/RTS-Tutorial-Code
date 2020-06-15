@@ -31,10 +31,10 @@ public class ObjectInfo : MonoBehaviour {
     public GameObject[] drops; //An array of possible drop off locations
 
     public GameObject targetNode; //This colonist's target node for gathering
+
     #endregion
 
-    private GUIManager GM; //A reference to our GUIManager object
-
+    #region Enums
     public enum ObjectTypes { Node, Building, Unit}; //Possible object types
     public ObjectTypes objectType; //This object's type
 
@@ -43,22 +43,32 @@ public class ObjectInfo : MonoBehaviour {
 
     public enum TaskList { Gathering, Attacking, Moving, Building, Idle, Delivering}; //Possible tasks this object can perform
     public TaskList task; //The task this object is currently performing
+    #endregion
+
+    #region References
+    private GUIManager GM; //A reference to our GUIManager object
 
     public GameObject selectionIndidcator; //The object that shows the unit is selected
     public GameObject iconCam; //The Camera that feeds into the unitIcon
     public GameObject target; //This object's current target
 
+    public NavMeshAgent agent; //The NavMeshAgent attached to the Colonist
+    #endregion
+
+    #region Bools
     public bool isPrimary = false; //Is the object the primary object?
-    public bool isSelected = false; //Is the object selected?
     public bool isColonist; //Is this unit a colonist?
     public bool isUnit; //Is the object a unit?
     public bool isPlayerObject; //Does the player own this object?
     public bool isAllyObject; //Does an ally own this object?
     public bool canAttack; //Can this object attack?
+    #endregion
 
     public string objectName; //The object's name
     public string toolTipInfo; //The object's description
+    public string[] actions = new string[16]; //Object's available actions
 
+    #region Attributes
     public float health; //The object's current health
     public float maxHealth; //The object's max health
     public float energy; //The object's current energy
@@ -67,16 +77,21 @@ public class ObjectInfo : MonoBehaviour {
     public float pdef; //The object's physical defense
     public float eatk; //The object's energy attack
     public float edef; //The object's energy defense
-    public float distToTarget; //Distance to the target point
-    public float attackSpeed; //How fast the target can attack. Higher number means slower attack
     public float range; //The attack range of the object
 
     public int kills; //The object's kill count
+    #endregion
 
-    private NavMeshAgent agent; //The NavMeshAgent attached to the Colonist
+    public float distToTarget; //Distance to the target point
+    public float attackSpeed; //How fast the target can attack. Higher number means slower attack
+
+    internal bool isSelected { get; set; } //Retrieves the object's selected value
 
     // Use this for initialization
     void Start () {
+
+        health = maxHealth; //Set health = maxHealth
+        energy = maxEnergy; //Set energy = maxEnergy
 
         StartCoroutine(AttackTick()); //Starts the AttackTick() IEnumerator
 
@@ -231,8 +246,6 @@ public class ObjectInfo : MonoBehaviour {
                 distToTarget = Vector3.Distance(GetClosestDropOff(drops).transform.position, transform.position); //The distance to the target drop point
                 drops = null; //Clear the drop array
                 task = TaskList.Delivering; //Set the colonist to be delivering
-                GetComponent<NavMeshObstacle>().enabled = false; //Disable the NavMeshObstacle component
-                GetComponent<NavMeshAgent>().enabled = true; //Enable the NavMeshAgent component
 
             }
         }
@@ -407,8 +420,6 @@ public class ObjectInfo : MonoBehaviour {
         }
 
         heldResourceType = target.GetComponent<ObjectInfo>().resourceType; //Sets the resource that the colonist is holding to the same as the node
-        GetComponent<NavMeshObstacle>().enabled = true; //Enables the NavMeshObstacle component
-        GetComponent<NavMeshAgent>().enabled = false; //Disable the NavMeshAgent component
     }
 
     //If the player hovers over this object witht he mouse, display this object's description in the tooltip
@@ -421,6 +432,18 @@ public class ObjectInfo : MonoBehaviour {
     private void OnMouseExit()
     {
         GM.tooltipInfo = "Hover the Mouse over an Object to see a ToolTip";
+    }
+
+    //Called when object is enabled
+    private void OnEnable()
+    {
+        InputManager.selectedObjects.Add(this);
+    }
+
+    //Called when object is disabled
+    private void OnDisable()
+    {
+        InputManager.selectedObjects.Remove(this);
     }
 
     //Handles the incrementation process
